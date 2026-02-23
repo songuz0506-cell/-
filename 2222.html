@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>계급장 키우기 게임</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f0f0f0; text-align: center; }
+    #rank { font-size: 32px; margin: 30px 0 10px 0; }
+    #exp-bar {
+      width: 300px; height: 30px; background: #ddd; border-radius: 15px;
+      margin: 0 auto 20px auto; overflow: hidden; box-shadow: 0 2px 4px #bbb;
+    }
+    #exp-fill {
+      height: 100%; background: #4caf50; width: 0%; transition: width 0.3s;
+    }
+    #exp-text { margin-bottom: 20px; font-size: 18px; }
+    button {
+      font-size: 20px; padding: 12px 32px; border: none; border-radius: 8px;
+      background: #2196f3; color: #fff; cursor: pointer; margin-bottom: 20px;
+      transition: background 0.2s;
+    }
+    button:hover { background: #1976d2; }
+  </style>
+</head>
+<body>
+  <h1>계급장 키우기 게임</h1>
+  <div id="rank">이등병</div>
+  <div id="exp-bar"><div id="exp-fill"></div></div>
+  <div id="exp-text">경험치: 0 / 10</div>
+  <button onclick="gainExp()">훈련하기</button>
+  <script>
+    const ranks = [
+      "이등병", "일등병", "상등병", "병장",
+      "하사", "중사", "상사", "원사",
+      "소위", "중위", "대위", "소령", "중령", "대령",
+      "준장", "소장", "중장", "대장"
+    ];
+    let currentRank = 0;
+    let exp = 0;
+    let expToNext = 10;
+
+    function updateUI() {
+      document.getElementById('rank').textContent = ranks[currentRank];
+      document.getElementById('exp-fill').style.width = (exp / expToNext * 100) + "%";
+      document.getElementById('exp-text').textContent = `경험치: ${exp} / ${expToNext}`;
+    }
+
+    function gainExp() {
+      if (currentRank === ranks.length - 1) {
+        alert("최고 계급에 도달했습니다!");
+        return;
+      }
+      exp++;
+      if (exp >= expToNext) {
+        exp = 0;
+        currentRank++;
+        expToNext = Math.floor(expToNext * 1.3) + 5;
+        alert(`축하합니다! ${ranks[currentRank]}로 승진했습니다!`);
+      }
+      updateUI();
+    }
+
+    updateUI();
+  </script>
+</body>
+</html>
