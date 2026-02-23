@@ -2,150 +2,204 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>계급장 키우기</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Valorant Web FPS - Aim Trainer</title>
 <style>
-body{
-  margin:0;
-  background:#111;
-  color:white;
-  font-family:system-ui;
-  display:flex;
-  justify-content:center;
-}
-#game{
-  width:420px;
-  background:#1b1b1b;
-  padding:12px;
-}
-.box{
-  background:#222;
-  margin:6px 0;
-  padding:10px;
-  border-radius:10px;
-}
-button{
-  width:100%;
-  padding:10px;
-  background:#3a7;
-  border:none;
-  border-radius:8px;
-  font-size:16px;
-  font-weight:bold;
-}
-button:active{transform:scale(.98)}
-h2{text-align:center;margin:5px 0}
-.bar{
-  height:18px;
-  background:#333;
-  border-radius:10px;
-  overflow:hidden;
-}
-.fill{
-  height:100%;
-  background:linear-gradient(90deg,#3f7,#0ff);
-}
-.stat{
-  display:flex;
-  justify-content:space-between;
+body{margin:0;overflow:hidden;background:black;font-family:Arial}
+
+#hud{position:fixed;top:15px;left:50%;transform:translateX(-50%);color:white;font-size:18px}
+
+#ammo{position:fixed;bottom:20px;right:20px;color:#0f0;font-size:22px}
+
+#crosshair{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);color:white;font-size:22px}
+
+#settings{
+position:fixed;
+top:20px;
+right:20px;
+background:rgba(0,0,0,.7);
+padding:10px;
+border-radius:8px;
+color:white;
+font-size:14px
 }
 </style>
 </head>
+
 <body>
 
-<div id="game">
-<h2>🎖 계급장 키우기</h2>
+<div id="hud">Valorant Web FPS</div>
+<div id="ammo">25 / 75</div>
+<div id="crosshair">+</div>
 
-<div class="box">
-  <div class="stat"><span>계급</span><span id="rank">이등병</span></div>
-  <div class="stat"><span>전투력</span><span id="power">10</span></div>
-  <div class="stat"><span>골드</span><span id="gold">0</span></div>
-  <div class="stat"><span>보석</span><span id="gem">0</span></div>
+<div id="settings">
+감도<br>
+<input type="range" min="0.1" max="3" step="0.01" value="1" id="sens"><br>
+<span id="sensVal">1.00</span>
 </div>
 
-<div class="box">
-  <b>스테이지</b> <span id="stage">1</span>
-  <div class="bar"><div id="hpBar" class="fill"></div></div>
-  <button onclick="attack()">⚔ 공격</button>
-</div>
-
-<div class="box">
-  <button onclick="upgrade()">🔧 강화 (비용: <span id="upCost">50</span>G)</button>
-</div>
-
-<div class="box">
-  <button onclick="mobilize()">🚨 동원령 (쿨타임 30초)</button>
-</div>
-
-<div class="box">
-  <button onclick="quest()">📜 퀘스트 수행</button>
-</div>
-
-</div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
 
 <script>
-let rankNames=["이등병","일등병","상병","병장","하사","중사","상사","원사","소위","중위","대위","소령","중령","대령","준장","소장","중장","대장"];
-let stage=1;
-let maxHP=100;
-let hp=100;
-let atk=10;
-let gold=0;
-let gem=0;
-let upCost=50;
-let rank=0;
-let mobilizeCooldown=false;
+// ================= 씬 =================
+let scene=new THREE.Scene();
+scene.background=new THREE.Color(0x050505);
 
-function update(){
-  document.getElementById("stage").innerText=stage;
-  document.getElementById("power").innerText=atk;
-  document.getElementById("gold").innerText=gold;
-  document.getElementById("gem").innerText=gem;
-  document.getElementById("rank").innerText=rankNames[rank];
-  document.getElementById("upCost").innerText=upCost;
-  document.getElementById("hpBar").style.width=(hp/maxHP*100)+"%";
+let camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,0.1,1000);
+camera.position.set(0,1.7,5);
+
+let renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// ================= 조명 =================
+scene.add(new THREE.AmbientLight(0xffffff,.4));
+scene.add(new THREE.DirectionalLight(0xffffff,1).position.set(5,10,5));
+
+// ================= 바닥 =================
+let floor=new THREE.Mesh(
+new THREE.PlaneGeometry(200,200),
+new THREE.MeshStandardMaterial({color:0x444444})
+);
+floor.rotation.x=-Math.PI/2;
+scene.add(floor);
+
+// ================= 벽 =================
+function wall(x,z,w,d){
+let m=new THREE.Mesh(
+new THREE.BoxGeometry(w,4,d),
+new THREE.MeshStandardMaterial({color:0x555555})
+);
+m.position.set(x,2,z);
+scene.add(m);
+}
+wall(0,-100,200,1);
+wall(0,100,200,1);
+wall(-100,0,1,200);
+wall(100,0,1,200);
+
+// ================= 타겟 =================
+let bots=[];
+
+function spawnBot(){
+let geo=new THREE.SphereGeometry(0.45,32,32);
+let mat=new THREE.MeshStandardMaterial({color:0xff3333});
+let bot=new THREE.Mesh(geo,mat);
+
+bot.position.set(
+(Math.random()-0.5)*40,
+1.5+Math.random()*2,
+(Math.random()-0.5)*40
+);
+
+bot.health=100;
+scene.add(bot);
+bots.push(bot);
 }
 
-function attack(){
-  hp-=atk;
-  if(hp<=0){
-    stage++;
-    let reward=Math.floor(30+stage*10);
-    gold+=reward;
-    if(Math.random()<0.25) gem++;
-    if(stage%5==0 && rank<rankNames.length-1) rank++;
-    maxHP=Math.floor(120+stage*25);
-    hp=maxHP;
-  }
-  update();
+for(let i=0;i<10;i++) spawnBot();
+
+// ================= 마우스 =================
+let yaw=0,pitch=0,sensitivity=1;
+
+document.body.onclick=()=>document.body.requestPointerLock();
+
+document.onmousemove=e=>{
+if(document.pointerLockElement){
+yaw-=e.movementX*0.002*sensitivity;
+pitch-=e.movementY*0.002*sensitivity;
+pitch=Math.max(-1.45,Math.min(1.45,pitch));
+}
+};
+
+// ================= 이동 =================
+let keys={};
+onkeydown=e=>keys[e.key.toLowerCase()]=true;
+onkeyup=e=>keys[e.key.toLowerCase()]=false;
+
+// ================= 총 시스템 =================
+let magSize=25;
+let ammo=25;
+let reserve=75;
+let reload=false;
+
+document.onmousedown=shoot;
+
+document.onkeydown=e=>{
+if(e.key.toLowerCase()==='r') reloadGun();
+};
+
+function reloadGun(){
+if(reload||ammo===magSize||reserve<=0)return;
+reload=true;
+
+setTimeout(()=>{
+let need=magSize-ammo;
+let load=Math.min(need,reserve);
+ammo+=load;
+reserve-=load;
+reload=false;
+},1200);
 }
 
-function upgrade(){
-  if(gold<upCost) return alert("골드 부족!");
-  gold-=upCost;
-  atk+=Math.floor(atk*0.25)+5;
-  upCost=Math.floor(upCost*1.6);
-  update();
+// ================= 사격 =================
+let raycaster=new THREE.Raycaster();
+
+function shoot(){
+if(ammo<=0||reload)return;
+ammo--;
+
+raycaster.setFromCamera({x:0,y:0},camera);
+let hit=raycaster.intersectObjects(bots);
+
+if(hit.length){
+let bot=hit[0].object;
+bot.health-=100;
+
+if(bot.health<=0){
+scene.remove(bot);
+bots.splice(bots.indexOf(bot),1);
+spawnBot();
+}
+}
 }
 
-function mobilize(){
-  if(mobilizeCooldown) return alert("동원령 재사용 대기중!");
-  mobilizeCooldown=true;
-  atk*=3;
-  setTimeout(()=>{atk=Math.floor(atk/3);},10000);
-  setTimeout(()=>{mobilizeCooldown=false;},30000);
-  update();
+// ================= UI =================
+sens.oninput=()=>{
+sensitivity=sens.value;
+sensVal.innerText=parseFloat(sensitivity).toFixed(2);
+};
+
+// ================= 렌더 =================
+function animate(){
+requestAnimationFrame(animate);
+
+camera.rotation.order="YXZ";
+camera.rotation.y=yaw;
+camera.rotation.x=pitch;
+
+let speed=0.12;
+let forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
+let right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
+
+if(keys['w']) camera.position.add(forward.clone().multiplyScalar(speed));
+if(keys['s']) camera.position.add(forward.clone().multiplyScalar(-speed));
+if(keys['a']) camera.position.add(right.clone().multiplyScalar(-speed));
+if(keys['d']) camera.position.add(right.clone().multiplyScalar(speed));
+
+ammoDiv.innerText=`${ammo} / ${reserve}`;
+
+renderer.render(scene,camera);
 }
 
-function quest(){
-  let g=50+Math.floor(Math.random()*100);
-  let gm=Math.random()<0.4?1:0;
-  gold+=g;
-  gem+=gm;
-  alert(`퀘스트 완료!\n골드 +${g}\n보석 +${gm}`);
-  update();
-}
+let ammoDiv=document.getElementById("ammo");
 
-update();
+animate();
+
+onresize=()=>{
+camera.aspect=innerWidth/innerHeight;
+camera.updateProjectionMatrix();
+renderer.setSize(innerWidth,innerHeight);
+};
 </script>
 
 </body>
